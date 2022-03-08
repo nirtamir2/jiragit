@@ -45,8 +45,8 @@ async function createBranchForExistingIssue({
   jiraConfig: JiraConfig;
 }) {
   const searchIssues = await jiraClient.issueSearch.searchForIssuesUsingJql({
-    jql: "assignee in (currentUser()) and sprint in openSprints() order by created DESC",
-    fields: ["summary", "status", "assignee", "priority", "description"],
+    jql: "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
+    fields: ["summary", "description"],
   });
 
   const { issue } = (await prompts([
