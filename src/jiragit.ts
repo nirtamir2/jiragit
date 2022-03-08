@@ -31,7 +31,11 @@ const JiraConfigSchema: ZodSchema<JiraConfig> = z.object({
 
 function logInfoData(text: string) {
   // eslint-disable-next-line no-console
-  console.log(chalk.blue(text));
+  console.log(chalk.green(text));
+}
+
+function throwCancelOperationError() {
+  throw new Error(`${chalk.red("✖")} Operation cancelled`);
 }
 
 function getJiraIssueUrl({ host, key }: { host: string; key: string }) {
@@ -54,41 +58,44 @@ async function createBranchForExistingIssue({
     fields: ["summary", "description"],
   });
 
-  const { issue } = (await prompts([
-    {
-      type: "autocomplete",
-      message: "Select an issue",
-      name: "issue",
-      // Because it requires a Promise in TypeScript
-      // eslint-disable-next-line @typescript-eslint/require-await
-      suggest: async (input: string, choices) => {
-        return choices.filter((choice) => {
-          return (
-            choice.title.includes(input) || choice.description?.includes(input)
-          );
-        });
+  const { issue } = (await prompts(
+    [
+      {
+        type: "autocomplete",
+        message: "Select an issue:",
+        name: "issue",
+        // Because it requires a Promise in TypeScript
+        // eslint-disable-next-line @typescript-eslint/require-await
+        suggest: async (input: string, choices) => {
+          return choices.filter((choice) => {
+            return (
+              choice.title.includes(input) ||
+              choice.description?.includes(input)
+            );
+          });
+        },
+        choices:
+          searchIssues.issues?.map((issue) => {
+            return {
+              title: issue.key,
+              value: issue,
+              description: issue.fields.summary,
+            };
+          }) ?? [],
       },
-      choices:
-        searchIssues.issues?.map((issue) => {
-          return {
-            title: issue.key,
-            value: issue,
-            description: issue.fields.summary,
-          };
-        }) ?? [],
+    ],
+    { onCancel: throwCancelOperationError }
+  )) as { issue: JiraJS.Version2.Version2Models.Issue };
+
+  const { branchName } = (await prompts(
+    {
+      type: "text",
+      name: "branchName",
+      message: "Branch name:",
+      initial: `${issue.key}-${convertToHyphenCase(issue.fields.summary)}`,
     },
-  ])) as { issue: JiraJS.Version2.Version2Models.Issue };
-
-  const { branchName } = (await prompts({
-    type: "text",
-    name: "branchName",
-    message: "Creating a new branch",
-    initial: `${issue.key}-${convertToHyphenCase(issue.fields.summary)}`,
-  })) as { branchName: string | undefined };
-
-  if (branchName == null) {
-    return;
-  }
+    { onCancel: throwCancelOperationError }
+  )) as { branchName: string };
 
   logInfoData(getJiraIssueUrl({ host: jiraConfig.host, key: issue.key }));
 
@@ -98,12 +105,15 @@ async function createBranchForExistingIssue({
 async function initConfig() {
   fs.writeJsonSync(configFilePath, DEFAULT_CONFIG);
   logInfoData(`Created a config file in path "${configFilePath}"`);
-  const { shouldOpenFile } = (await prompts({
-    type: "confirm",
-    name: "shouldOpenFile",
-    message: "Do you want to open it now?",
-    initial: true,
-  })) as { shouldOpenFile: boolean };
+  const { shouldOpenFile } = (await prompts(
+    {
+      type: "confirm",
+      name: "shouldOpenFile",
+      message: "Do you want to open it now?",
+      initial: true,
+    },
+    { onCancel: throwCancelOperationError }
+  )) as { shouldOpenFile: boolean };
 
   if (shouldOpenFile) {
     openEditor([
@@ -123,36 +133,42 @@ async function createBranchForNewJiraIssue({
   jiraConfig: JiraConfig;
 }) {
   const issueTypes = await jiraClient.issueTypes.getIssueAllTypes();
-  const { issueType } = (await prompts([
-    {
-      type: "select",
-      name: "issueType",
-      message: "choose JIRA issue type",
-      choices: issueTypes.flatMap((issueType) => {
-        if (issueType.name == null) {
-          return [];
-        }
-        return {
-          value: issueType,
-          title: issueType.name,
-          description: issueType.description,
-        };
-      }),
-    },
-  ])) as { issueType: JiraJS.Version2Models.IssueTypeScheme };
+  const { issueType } = (await prompts(
+    [
+      {
+        type: "select",
+        name: "issueType",
+        message: "Issue type:",
+        choices: issueTypes.flatMap((issueType) => {
+          if (issueType.name == null) {
+            return [];
+          }
+          return {
+            value: issueType,
+            title: issueType.name,
+            description: issueType.description,
+          };
+        }),
+      },
+    ],
+    { onCancel: throwCancelOperationError }
+  )) as { issueType: JiraJS.Version2Models.IssueTypeScheme };
 
-  const { summary, description } = (await prompts([
-    {
-      type: "text",
-      message: "enter JIRA issue summary",
-      name: "summary",
-    },
-    {
-      type: "text",
-      message: "enter JIRA issue description",
-      name: "description",
-    },
-  ])) as { summary: string; description: string };
+  const { summary, description } = (await prompts(
+    [
+      {
+        type: "text",
+        message: "Summary:",
+        name: "summary",
+      },
+      {
+        type: "text",
+        message: "Description:",
+        name: "description",
+      },
+    ],
+    { onCancel: throwCancelOperationError }
+  )) as { summary: string; description: string };
 
   const currentUser = await jiraClient.myself.getCurrentUser();
 
@@ -170,20 +186,24 @@ async function createBranchForNewJiraIssue({
     },
   });
 
-  logInfoData(getJiraIssueUrl({ host: jiraConfig.host, key: newIssue.key }));
+  const jiraIssueUrl = getJiraIssueUrl({
+    host: jiraConfig.host,
+    key: newIssue.key,
+  });
+
+  logInfoData(`Created new issue in ${jiraIssueUrl}`);
 
   const initialBranchName = `${newIssue.key}-${convertToHyphenCase(summary)}`;
 
-  const { branchName } = (await prompts({
-    type: "text",
-    name: "branchName",
-    message: "Creating a new branch",
-    initial: initialBranchName,
-  })) as { branchName: string | undefined };
-
-  if (branchName == null) {
-    return;
-  }
+  const { branchName } = (await prompts(
+    {
+      type: "text",
+      name: "branchName",
+      message: "Branch name:",
+      initial: initialBranchName,
+    },
+    { onCancel: throwCancelOperationError }
+  )) as { branchName: string };
 
   await $`git checkout -b ${branchName}`;
 }
@@ -214,21 +234,26 @@ async function init() {
     },
   });
 
-  const { action } = (await prompts({
-    name: "action",
-    message: "choose action",
-    type: "select",
-    choices: [
-      {
-        title: "Create new issue",
-        value: Action.CreateNewIssue,
-      },
-      {
-        title: "Choose existing issue",
-        value: Action.CheckoutExistingIssue,
-      },
-    ],
-  })) as { action: Action };
+  const { action } = (await prompts(
+    {
+      name: "action",
+      message: "Action:",
+      type: "select",
+      choices: [
+        {
+          title: "New issue",
+          value: Action.CreateNewIssue,
+        },
+        {
+          title: "Existing issue",
+          value: Action.CheckoutExistingIssue,
+        },
+      ],
+    },
+    {
+      onCancel: throwCancelOperationError,
+    }
+  )) as { action: Action };
 
   switch (action) {
     case Action.CheckoutExistingIssue:
@@ -238,4 +263,14 @@ async function init() {
   }
 }
 
-void init();
+try {
+  void init();
+} catch (error) {
+  const parsedError = z.object({ message: z.string() }).safeParse(error);
+  if (parsedError.success) {
+    // eslint-disable-next-line no-console
+    console.log(parsedError.data.message);
+  } else {
+    console.error(error);
+  }
+}
