@@ -1,0 +1,191 @@
+import JiraJS from "jira.js";
+import openEditor from "open-editor";
+import prompts from "prompts";
+import { z } from "zod";
+import { $, chalk, fs, os, path } from "zx";
+const configFilePath = path.join(os.homedir(), "./jiragit.config.json");
+var Action;
+(function (Action) {
+    Action["CheckoutExistingIssue"] = "CheckoutExistingIssue";
+    Action["CreateNewIssue"] = "CreateNewIssue";
+})(Action || (Action = {}));
+const DEFAULT_CONFIG = {
+    email: "me@mycompany.com",
+    token: "TODO: generate in https://id.atlassian.com/manage-profile/security/api-tokens",
+    host: "https://mycompany.atlassian.net",
+    projectKey: "Example: for issue like ABC-123 ABC is the project key",
+};
+const JiraConfigSchema = z.object({
+    email: z.string().email(),
+    token: z.string(),
+    host: z.string().url(),
+    projectKey: z.string(),
+});
+function logInfoData(text) {
+    // eslint-disable-next-line no-console
+    console.log(chalk.blue(text));
+}
+function getJiraIssueUrl({ host, key }) {
+    return `${host}/browse/${key}`;
+}
+function convertToHyphenCase(text) {
+    return text.replace(/ +/g, "-").toLowerCase();
+}
+async function createBranchForExistingIssue({ jiraClient, jiraConfig, }) {
+    const searchIssues = await jiraClient.issueSearch.searchForIssuesUsingJql({
+        jql: "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
+        fields: ["summary", "description"],
+    });
+    const { issue } = (await prompts([
+        {
+            type: "autocomplete",
+            message: "Select an issue",
+            name: "issue",
+            // Because it requires a Promise in TypeScript
+            // eslint-disable-next-line @typescript-eslint/require-await
+            suggest: async (input, choices) => {
+                return choices.filter((choice) => {
+                    return (choice.title.includes(input) || choice.description?.includes(input));
+                });
+            },
+            choices: searchIssues.issues?.map((issue) => {
+                return {
+                    title: issue.key,
+                    value: issue,
+                    description: issue.fields.summary,
+                };
+            }) ?? [],
+        },
+    ]));
+    const { branchName } = (await prompts({
+        type: "text",
+        name: "branchName",
+        message: "Creating a new branch",
+        initial: `${issue.key}-${convertToHyphenCase(issue.fields.summary)}`,
+    }));
+    if (branchName == null) {
+        return;
+    }
+    logInfoData(getJiraIssueUrl({ host: jiraConfig.host, key: issue.key }));
+    await $ `git checkout -b ${branchName}`;
+}
+async function initConfig() {
+    fs.writeJsonSync(configFilePath, DEFAULT_CONFIG);
+    logInfoData(`Created a config file in path "${configFilePath}"`);
+    const { shouldOpenFile } = (await prompts({
+        type: "confirm",
+        name: "shouldOpenFile",
+        message: "Do you want to open it now?",
+        initial: true,
+    }));
+    if (shouldOpenFile) {
+        openEditor([
+            {
+                file: configFilePath,
+            },
+        ]);
+        chalk.blue("Please edit your file an rerun the jiragit command");
+    }
+}
+async function createBranchForNewJiraIssue({ jiraClient, jiraConfig, }) {
+    const issueTypes = await jiraClient.issueTypes.getIssueAllTypes();
+    const { issueType } = (await prompts([
+        {
+            type: "select",
+            name: "issueType",
+            message: "choose JIRA issue type",
+            choices: issueTypes.flatMap((issueType) => {
+                if (issueType.name == null) {
+                    return [];
+                }
+                return {
+                    value: issueType,
+                    title: issueType.name,
+                    description: issueType.description,
+                };
+            }),
+        },
+    ]));
+    const { summary, description } = (await prompts([
+        {
+            type: "text",
+            message: "enter JIRA issue summary",
+            name: "summary",
+        },
+        {
+            type: "text",
+            message: "enter JIRA issue description",
+            name: "description",
+        },
+    ]));
+    const currentUser = await jiraClient.myself.getCurrentUser();
+    const newIssue = await jiraClient.issues.createIssue({
+        fields: {
+            issuetype: { id: issueType.id },
+            project: {
+                key: jiraConfig.projectKey,
+            },
+            assignee: {
+                id: currentUser.accountId,
+            },
+            summary,
+            description,
+        },
+    });
+    logInfoData(getJiraIssueUrl({ host: jiraConfig.host, key: newIssue.key }));
+    const initialBranchName = `${newIssue.key}-${convertToHyphenCase(summary)}`;
+    const { branchName } = (await prompts({
+        type: "text",
+        name: "branchName",
+        message: "Creating a new branch",
+        initial: initialBranchName,
+    }));
+    if (branchName == null) {
+        return;
+    }
+    await $ `git checkout -b ${branchName}`;
+}
+async function init() {
+    const hasExistingConfig = fs.pathExistsSync(configFilePath);
+    if (!hasExistingConfig) {
+        await initConfig();
+        return;
+    }
+    // unicorn/prefer-json-parse-buffer - TypeScript have problems converting string to buffer
+    // security/detect-non-literal-fs-filename - configFilePath variable is constant
+    // eslint-disable-next-line security/detect-non-literal-fs-filename, unicorn/prefer-json-parse-buffer
+    const content = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
+    const jiraConfig = JiraConfigSchema.parse(content);
+    const { email, token, host } = jiraConfig;
+    const jiraClient = new JiraJS.Version2Client({
+        host,
+        authentication: {
+            basic: {
+                email,
+                apiToken: token,
+            },
+        },
+    });
+    const { action } = (await prompts({
+        name: "action",
+        message: "choose action",
+        type: "select",
+        choices: [
+            {
+                title: "Create new issue",
+                value: Action.CreateNewIssue,
+            },
+            {
+                title: "Choose existing issue",
+                value: Action.CheckoutExistingIssue,
+            },
+        ],
+    }));
+    switch (action) {
+        case Action.CheckoutExistingIssue:
+            return createBranchForExistingIssue({ jiraClient, jiraConfig });
+        case Action.CreateNewIssue:
+            return createBranchForNewJiraIssue({ jiraClient, jiraConfig });
+    }
+}
+void init();
