@@ -1,0 +1,20 @@
+{
+  "root": true,
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "extends": [
+    "nirtamir2/recommended",
+    "nirtamir2/typescript",
+    "nirtamir2/security"
+  ],
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "rules": {
+        "import/no-nodejs-modules": "off",
+        "quotes": "error" // so we won't forget to remove useless backticks
+      }
+    }
+  ]
+}

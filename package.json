@@ -2,15 +2,37 @@
   "name": "jiragit",
   "version": "0.0.0",
   "description": "Command line tool to connect between jira and git branch",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [
     "jira",
     "git",
     "cli"
   ],
+  "license": "MIT",
   "author": "Nir Tamir <nirtamir2@gmail.com>",
-  "license": "MIT"
+  "type": "module",
+  "exports": [],
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --loader ts-node/esm src/jiragit.ts",
+    "lint": "eslint --ext .ts src"
+  },
+  "dependencies": {
+    "jira.js": "^2.11.0",
+    "open-editor": "^4.0.0",
+    "prompts": "^2.4.2",
+    "ts-node": "^10.6.0",
+    "zod": "^3.13.4",
+    "zx": "^5.2.0"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^3.2.0",
+    "@tsconfig/node16-strictest-esm": "^1.0.0",
+    "@types/node": "^16.11.26",
+    "@types/prompts": "^2.0.14",
+    "eslint": "^8.10.0",
+    "eslint-config-nirtamir2": "^0.0.24",
+    "prettier": "^2.5.1",
+    "prettier-plugin-packagejson": "^2.2.15",
+    "typescript": "^4.6.2"
+  }
 }

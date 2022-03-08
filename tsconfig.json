@@ -1,0 +1,10 @@
+{
+  "extends": "@tsconfig/node16-strictest-esm/tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*.ts"]
+}
