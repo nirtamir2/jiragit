@@ -12,9 +12,14 @@
   "type": "module",
   "exports": [],
   "main": "index.js",
+  "bin": {
+    "jiragit": "dist/jiragit.js"
+  },
   "scripts": {
+    "build": "rm -rf ./dist && tsc",
     "dev": "node --loader ts-node/esm src/jiragit.ts",
-    "lint": "eslint --ext .ts src"
+    "lint": "eslint --ext .ts src",
+    "prod": "node dist/jiragit.js"
   },
   "dependencies": {
     "jira.js": "^2.11.0",
