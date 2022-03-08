@@ -13,7 +13,8 @@
       "files": ["*.ts"],
       "rules": {
         "import/no-nodejs-modules": "off",
-        "quotes": "error" // so we won't forget to remove useless backticks
+        "quotes": "error", // so we won't forget to remove useless backticks
+        "unicorn/prefer-string-replace-all": "error"
       }
     }
   ]

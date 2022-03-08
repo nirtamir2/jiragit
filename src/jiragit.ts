@@ -37,6 +37,10 @@ function getJiraIssueUrl({ host, key }: { host: string; key: string }) {
   return `${host}/browse/${key}`;
 }
 
+function convertToHyphenCase(text: string) {
+  return text.replace(/ +/g, "-").toLowerCase();
+}
+
 async function createBranchForExistingIssue({
   jiraClient,
   jiraConfig,
@@ -78,9 +82,7 @@ async function createBranchForExistingIssue({
     type: "text",
     name: "branchName",
     message: "Creating a new branch",
-    initial: `${issue.key}-${issue.fields.summary}`
-      .replace(/ +/g, "-")
-      .toLowerCase(),
+    initial: `${issue.key}-${convertToHyphenCase(issue.fields.summary)}`,
   })) as { branchName: string | undefined };
 
   if (branchName == null) {
@@ -169,9 +171,7 @@ async function createBranchForNewJiraIssue({
 
   logInfoData(getJiraIssueUrl({ host: jiraConfig.host, key: newIssue.key }));
 
-  const initialBranchName = `${newIssue.key}-${summary}`
-    .replace(/ +/g, "-")
-    .toLowerCase();
+  const initialBranchName = `${newIssue.key}-${convertToHyphenCase(summary)}`;
 
   const { branchName } = (await prompts({
     type: "text",
