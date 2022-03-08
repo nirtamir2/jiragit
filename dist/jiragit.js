@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import JiraJS from "jira.js";
 import openEditor from "open-editor";
 import prompts from "prompts";
