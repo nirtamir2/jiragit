@@ -6,9 +6,11 @@ CLI to create git branches from JIRA tasks
 
 ## Demo
 
-https://user-images.githubusercontent.com/16452789/157350361-03b86b8c-7b62-4528-991c-7368a721b671.mp4
+### Checkout task
+![Checkout task demo](./demo/checkout-task-demo.gif )
 
-https://user-images.githubusercontent.com/16452789/157350377-9179329a-b5b7-412a-a6bf-f7b255f0d538.mp4
+### Create task
+![Create task demo](./demo/create-task-demo.gif )
 
 ## Installation
 
