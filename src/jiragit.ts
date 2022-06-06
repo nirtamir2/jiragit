@@ -20,6 +20,8 @@ const DEFAULT_CONFIG: JiraConfig = {
     "TODO: generate in https://id.atlassian.com/manage-profile/security/api-tokens",
   host: "https://mycompany.atlassian.net",
   projectKey: "Example: for issue like ABC-123 ABC is the project key",
+  jql:
+    "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
 };
 
 const JiraConfigSchema: ZodSchema<JiraConfig> = z.object({
@@ -27,6 +29,7 @@ const JiraConfigSchema: ZodSchema<JiraConfig> = z.object({
   token: z.string(),
   host: z.string().url(),
   projectKey: z.string(),
+  jql: z.string(),
 });
 
 function logInfoData(text: string) {
@@ -54,7 +57,7 @@ async function createBranchForExistingIssue({
   jiraConfig: JiraConfig;
 }) {
   const searchIssues = await jiraClient.issueSearch.searchForIssuesUsingJql({
-    jql: "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
+    jql: jiraConfig.jql,
     fields: ["summary", "description"],
   });
 
