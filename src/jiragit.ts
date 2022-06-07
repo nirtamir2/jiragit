@@ -43,7 +43,7 @@ function getJiraIssueUrl({ host, key }: { host: string; key: string }) {
 }
 
 function convertToHyphenCase(text: string) {
-  return text.replace(/ +/g, "-").toLowerCase();
+  return text.replace(/\W+/g, "-").toLowerCase();
 }
 
 async function createBranchForExistingIssue({
