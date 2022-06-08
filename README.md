@@ -1,16 +1,18 @@
 # @nirtamir2/jiragit
 
-![npm](https://img.shields.io/npm/v/@nirtamir2/jiragit)
+[![npm](https://img.shields.io/npm/v/@nirtamir2/jiragit)](https://www.npmjs.com/package/@nirtamir2/jiragit)
 
 CLI to create git branches from JIRA tasks
 
 ## Demo
 
 ### Checkout task
-![Checkout task demo](./demo/checkout-task-demo.gif )
+
+![Checkout task demo](./demo/checkout-task-demo.gif)
 
 ### Create task
-![Create task demo](./demo/create-task-demo.gif )
+
+![Create task demo](./demo/create-task-demo.gif)
 
 ## Installation
 
