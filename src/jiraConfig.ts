@@ -3,4 +3,5 @@ export interface JiraConfig {
   token: string;
   host: string;
   projectKey: string;
+  jql: string;
 }
