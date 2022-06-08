@@ -20,8 +20,7 @@ const DEFAULT_CONFIG: JiraConfig = {
     "TODO: generate in https://id.atlassian.com/manage-profile/security/api-tokens",
   host: "https://mycompany.atlassian.net",
   projectKey: "Example: for issue like ABC-123 ABC is the project key",
-  jql:
-    "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
+  jql: "assignee in (currentUser()) and sprint in openSprints() and statusCategory in ('To Do') order by created DESC",
 };
 
 const JiraConfigSchema: ZodSchema<JiraConfig> = z.object({
@@ -259,10 +258,14 @@ async function init() {
   )) as { action: Action };
 
   switch (action) {
-    case Action.CheckoutExistingIssue:
-      return createBranchForExistingIssue({ jiraClient, jiraConfig });
-    case Action.CreateNewIssue:
-      return createBranchForNewJiraIssue({ jiraClient, jiraConfig });
+    case Action.CheckoutExistingIssue: {
+      await createBranchForExistingIssue({ jiraClient, jiraConfig });
+      break;
+    }
+    case Action.CreateNewIssue: {
+      await createBranchForNewJiraIssue({ jiraClient, jiraConfig });
+      break;
+    }
   }
 }
 
